@@ -1,0 +1,425 @@
+<!DOCTYPE html>
+<html>
+ <meta charset="UTF-8">
+<head>
+    <script src="../dist/face-api.js"></script>
+    <script src="public/commons.js"></script>
+    <link rel="stylesheet" href="public/styles.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/materialize/0.100.2/css/materialize.css">
+    <script type="text/javascript" src="https://code.jquery.com/jquery-2.1.1.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/materialize/0.100.2/js/materialize.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@0.14.1/dist/tf.min.js"></script>
+
+<style>
+        .wrapper{
+            text-align: center;
+        }
+        .face-wrapper{
+            margin: 20px;
+        }
+        .face-wrapper canvas{
+            display: none;
+        }
+		
+    </style>
+</head>
+
+<body>
+    <div id="navbar"></div>
+    <div class="center-content">
+    <!-- <div class="center-content page-container"> -->
+        <div class="progress" id="loader">
+            <div class="indeterminate"></div>
+        </div>
+        <h5 >
+			<BR>生物人臉檢測辨識
+           <!-- <span id="status">Model Loading ...</span> -->
+            <span id="status"></span>
+			請看前方攝像頭
+        </h5>
+        <div style="position: relative" class="margin">
+	
+            <video onplay="onPlay(this)" id="inputVideo" autoplay muted></video>
+            <canvas id="overlay" />
+            <canvas id='canvas' />
+
+        </div>
+        
+		<!-- <button type="button" onClick="handleSubmit()">提交</button> -->
+		
+        <!--
+            <div class="row">
+                <label for="scoreThreshold">Score Threshold:</label>
+                <input disabled value="0.5" id="scoreThreshold" type="text" class="bold">
+            </div>
+-->
+        <!--
+            <button class="waves-effect waves-light btn" onclick="onDecreaseThreshold()">
+                <i class="material-icons left">-</i>
+            </button>
+            <button class="waves-effect waves-light btn" onclick="onIncreaseThreshold()">
+                <i class="material-icons left">+</i>
+            </button>
+-->
+       <!-- <div class="row side-by-side">
+            <div class="row">
+                <label for="time">Time:</label>
+                <input disabled value="-" id="time" type="text" class="bold">
+            </div>
+            <div class="row">
+                <label for="fps">Estimated Fps:</label>
+                <input disabled value="-" id="fps" type="text" class="bold">
+            </div>
+        </div>
+        <center style="padding:10px">-->
+		
+        <!--
+        <div id="status">Click Image to load its model </div>
+        <div style="padding:20px" style="border:1px solid #000000;">
+            <a id="lnk" onclick="loadModel('../../weights/mobilenetV1_models/model.json')" href="#">load</a>
+        </div>
+-->
+
+    </div>
+    <style>
+        #status {
+            font-family: Geneva, Tahoma, Verdana, sans-serif;
+        }
+
+        .inline {
+            display: inline-block;
+        }
+    </style>
+    <script>
+			 
+	
+        let scoreThreshold = 0.5
+        let sizeType = '160'
+        let modelLoaded = false
+        var cImg;
+        var constraints = {
+            audio: false,
+            video: {
+                width: 640,
+                height: 480
+            }
+        };
+        var EmotionModel;
+        var offset_x = 34;
+        var offset_y = 20;
+        var emotion_labels = ["angry", "disgust", "fear", "happy", "sad", "surprise", "neutral"];
+        var emotion_colors = ["#ff0000", "#00a800", "#ff4fc1", "#ffe100", "#306eff", "#ff9d00", "#7c7c7c"];
+
+        let forwardTimes = []
+
+        function updateTimeStats(timeInMs) {
+            forwardTimes = [timeInMs].concat(forwardTimes).slice(0, 30)
+            const avgTimeInMs = forwardTimes.reduce((total, t) => total + t) / forwardTimes.length
+            $('#time').val(`${Math.round(avgTimeInMs)} ms`)
+            $('#fps').val(`${faceapi.round(1000 / avgTimeInMs)}`)
+        }
+
+        function onIncreaseThreshold() {
+            scoreThreshold = Math.min(faceapi.round(scoreThreshold + 0.1), 1.0)
+            $('#scoreThreshold').val(scoreThreshold)
+        }
+
+        function onDecreaseThreshold() {
+            scoreThreshold = Math.max(faceapi.round(scoreThreshold - 0.1), 0.1)
+            $('#scoreThreshold').val(scoreThreshold)
+        }
+
+        function onSizeTypeChanged(e, c) {
+            sizeType = e.target.value
+            $('#sizeType').val(sizeType)
+        }
+
+        async function onPlay(videoEl) {
+            if (videoEl.paused || videoEl.ended || !modelLoaded)
+                return false
+
+            const {
+                width,
+                height
+            } = faceapi.getMediaDimensions(videoEl)
+            const canvas = $('#overlay').get(0)
+            canvas.width = width
+            canvas.height = height
+
+            const forwardParams = {
+                inputSize: parseInt(sizeType),
+                scoreThreshold
+            }
+
+            const ts = Date.now()
+            const result = await faceapi.detectAllFaces(videoEl, new faceapi.TinyFaceDetectorOptions(forwardParams))
+            console.result
+//            const result = await faceapi.tinyYolov2(videoEl, forwardParams)
+            if (result.length != 0) {
+
+
+                const context = canvas.getContext('2d')
+                context.drawImage(videoEl, 0, 0, width, height)
+
+
+
+                let ctx = context;
+                ctx.lineWidth = 4;
+                ctx.font = "25px Arial"
+                ctx.fillText('Result', 0, 0);
+
+                for (var i = 0; i < result.length; i++) {
+                    ctx.beginPath();
+                    var item = result[i].box;
+                    let s_x = Math.floor(item._x+offset_x);
+                    if (item.y<offset_y){
+                        var s_y = Math.floor(item._y);
+                    }
+                    else{
+                        var s_y = Math.floor(item._y-offset_y);
+                    }
+                    let s_w = Math.floor(item._width-offset_x);
+                    let s_h = Math.floor(item._height);
+                    let cT = ctx.getImageData(s_x, s_y, s_w, s_h);
+                    cT = preprocess(cT);
+
+                    z = EmotionModel.predict(cT)
+                    let index = z.argMax(1).dataSync()[0]
+                    let label = emotion_labels[index];
+                    ctx.strokeStyle = emotion_colors[index];
+                    ctx.rect(s_x, s_y, s_w, s_h);
+                    ctx.stroke();
+                    ctx.fillStyle = emotion_colors[index];
+                    ctx.fillText(label, s_x, s_y);
+                    ctx.closePath();
+                }
+
+            }
+
+
+            updateTimeStats(Date.now() - ts)
+
+            //            faceapi.drawDetection('overlay', result.map(det => det.forSize(width, height)), {
+            //                withScore: false
+            //            })
+            setTimeout(() => onPlay(videoEl))
+            var status = document.getElementById('status');
+           // status.innerHTML = "Running the model ... ";
+            status.innerHTML = "";
+        }
+        async function loadNetWeights(uri) {
+            return new Float32Array(await (await fetch(uri)).arrayBuffer())
+        }
+        // create model
+        async function createModel(path) {
+            let model = await tf.loadModel(path)
+            return model
+        }
+        // load emotion model
+        async function loadModel(path) {
+            //            var lbl = document.getElementById("status");
+            //            lbl.innerText = "Model Loading ..."
+            //            let canvas = document.getElementById("combined");
+            //            let cT = preprocess(cImg)
+            EmotionModel = await createModel(path)
+            //            z = model.predict(cT)
+            //            toPixels(deprocess(z), canvas)
+            //            lbl.innerText = "Model Loaded !"
+        }
+
+        function preprocess(imgData) {
+            return tf.tidy(() => {
+                let tensor = tf.fromPixels(imgData).toFloat();
+
+                tensor = tensor.resizeBilinear([100, 100])
+
+                tensor = tf.cast(tensor, 'float32')
+                const offset = tf.scalar(255.0);
+                // Normalize the image 
+                const normalized = tensor.div(offset);
+                //We add a dimension to get a batch shape 
+                const batched = normalized.expandDims(0)
+                return batched
+            })
+        }
+
+        function successCallback(stream) {
+            var videoEl = $('#inputVideo').get(0)
+			//this.video = this.$refs.video;
+            videoEl.srcObject = stream;
+        }
+
+        function errorCallback(error) {
+            alert(error)
+            console.log("navigator.getUserMedia error: ", error);
+            //            alert("navigator.getUserMedia error: ", error)
+        }
+
+        async function run() {
+            const Model_url = '../models/tiny_face_detector/tiny_face_detector_model-weights_manifest.json'
+            await faceapi.loadTinyFaceDetectorModel(Model_url)
+            modelLoaded = true
+
+            var status = document.getElementById('status');
+            //status.innerHTML = "Initializing the camera ... ";
+            status.innerHTML = "";
+
+            navigator.mediaDevices.getUserMedia(constraints)
+                .then(successCallback)
+                .catch(errorCallback);
+
+            onPlay($('#inputVideo').get(0))
+            $('#loader').hide()
+				
+        }
+
+
+        $(document).ready(function() {
+            loadModel('../models/mobilenetv1_models/model.json')
+
+            const sizeTypeSelect = $('#sizeType')
+            sizeTypeSelect.val(sizeType)
+            sizeTypeSelect.on('change', onSizeTypeChanged)
+            sizeTypeSelect.material_select()
+            run()
+        })
+		//
+		//function handleSubmit() {
+			 // 	 alert('rrrr');
+             //   }		    
+    </script>
+	
+	
+	<!-- -->
+
+	<!-- -->
+	 <div id="app">
+       <div class="wrapper">
+
+                <button type="button" @click="handleSubmit" id="myBtn" disabled class="btn btn-default">確定</button>
+
+            </div> 
+		
+            <div class="info">
+                {{info}}
+            </div>
+            <div class="face-wrapper"  style="display:none">
+                <video ref="video" width="640" height="480"></video>
+                <canvas ref="canvas" width="640" height="480"></canvas>
+                <img ref="previewImg" src="">
+            </div>
+
+        </div>
+    </div>
+	<!-- <script src="jquery-3.3.1.min.js"></script> -->
+    <script src="https://cdn.jsdelivr.net/npm/vue@2.5.21/dist/vue.js"></script>
+	<script>
+
+        const CODE_SUCCESS = 0
+        const CODE_ERROR = 1
+
+        const vm = new Vue({
+            el: '#app',
+            data: {
+                info: ''
+            },
+            mounted() {
+                this._intiMedia()
+            },
+            methods: {
+                _intiMedia() {
+                    let constraints = {
+                        audio: false,
+                        video: {width: 640, height: 480}
+                    }
+
+                    let _this = this
+                    navigator.mediaDevices.getUserMedia(constraints)
+                        .then((mediaStream) => {
+                            _this.video = this.$refs.video
+                            _this.video.srcObject = mediaStream
+                            _this.video.onloadedmetadata = function (e) {
+                                _this.video.play()
+                            }
+                        })
+                        .catch((err) => {
+                            console.log(err.name + ":" + err.message)
+                        })
+                },
+                handleSubmit() {
+
+                  
+					
+                    this.info = ''
+
+                    this.canvas = this.$refs.canvas;
+                    let ctx = this.canvas.getContext('2d')
+                    ctx.drawImage(this.video,0, 0, 640, 480)
+                    this.image = this.canvas.toDataURL('image/png')
+
+
+                    this.$refs.previewImg.src = this.image
+
+                    let base64Str = this.image.split('base64,')[1]
+
+                    console.log(base64Str)
+
+                    this.info = '正在處理...'
+
+                    let _this = this
+                    $.ajax({
+                        url: 'test.php',//PHP echo $_POST['username'];
+						method: "POST",
+                        data: {
+                            imgBase64: base64Str
+                        },
+                        success: function (resp) {
+                            console.log(resp)
+                            if (resp.code === CODE_SUCCESS) {
+                                _this.info = resp.message
+								// 
+                            } else {
+                                _this.info = resp.message
+								//OK 
+								//location.href="../index5.php";
+								location.href="index2.html";
+                            }
+                        },
+                        error: function (error) {
+                            console.log(error)
+                        }
+                    })
+                }
+            }
+
+        })
+    </script>
+	
+	<div id="myTimer"></div>
+<script>
+	var sec = 5;
+	var myTimer = document.getElementById('myTimer');
+	var myBtn = document.getElementById('myBtn');
+	window.onload = countDown;
+
+function countDown() {
+  if (sec < 10) {
+    myTimer.innerHTML = "0" + sec;
+  } else {
+    myTimer.innerHTML = sec;
+  }
+  if (sec <= 0) {
+    $("#myBtn").removeAttr("disabled");
+   // $("#myBtn").removeClass().addClass("btnEnable");
+    $("#myTimer").fadeTo(2500, 0);
+    //myBtn.innerHTML = "Click Me!";
+    return;
+  }
+  sec -= 1;
+  window.setTimeout(countDown, 1000);
+}
+</script>
+	
+</body>
+
+</html>

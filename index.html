@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="auto">
+
+<head>
+  <title>Code-O</title>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0">
+  <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.4.0/css/bootstrap.min.css">
+
+<style>
+        html {
+            height: 100%;
+        }
+
+        body {
+            background-image: url(hotel_header_image.jpg);
+            background-repeat: no-repeat;
+            background-attachment: fixed;
+            background-position: center;
+            background-size: cover;
+        }
+    </style>
+
+
+</head>
+<body>
+
+<div class="container" style="text-align:center;line-height:100px;">
+
+</BR>
+<fieldset>
+<h1><b><font color="white" >Welcome To AMY Hotel</font></b></h1>
+</BR><p>
+<b>
+<button type="button" value="入住報到" class="btn btn-default" style="color:black; width:160px; height:100px;font-size:34px;" onclick="location.href='http://127.0.0.1/ckface/index1.html';">入住報到</button></BR></BR>
+<button type="button" value="退房" class="btn btn-default" style="color:black; width:160px; height:100px;font-size:34px;" onclick="location.href='http://127.0.0.1/hotel/index.php';">退房</button></BR></BR>
+<button type="button" value="詢問客服" class="btn btn-default" style="color:black; width:160px; height:100px;font-size:34px;" onclick="location.href='http://127.0.0.1/ckface/index6.php';">詢問客服</button>
+</b>
+</p>
+
+</fieldset>
+
+</div>
+
+<div id="datetime" style="color:blue;font-size:20px;">
+    <script>
+        setInterval("document.getElementById('datetime').innerHTML=new Date().toLocaleString();", 1000);
+    </script>
+</div>
+
+
+</body>
+</html>

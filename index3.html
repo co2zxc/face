@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="auto">
+<head>
+  <title>Scanning ID</title>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0">
+  <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.4.0/css/bootstrap.min.css">
+  <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+  <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.4.0/js/bootstrap.min.js"></script>
+</head>
+<body>
+
+<div class="container" style="text-align:center;line-height:100px;">
+  <h1>證件拍照</h1>
+  <h2><p>身分證(本國) 或 護照 (外國)</p></h2>
+  <h2><p>請在下方證件掃描處SCAN AREA 放置並按下確定鈕</p></h2>
+ 
+
+<textarea id="descript" readonly="readonly" style="line-height:20px;font-size:28px;width:800px;height:300px;">
+
+
+
+
+
+
+	請在下方證件掃描處SCAN AREA 放置並按下確定鈕
+
+</textarea>
+
+<form action="index5.php" method="post" onsubmit="return checkForm(this);">
+<p><input id="field_terms" onchange="this.setCustomValidity(validity.valueMissing ? 'Please indicate that you accept the Terms and Conditions' : '');" type="checkbox" required name="terms"> 我已閱讀並同意遵守AMY Hotel <u>服務條款與隱私權政策</u></p>
+<p><b><input type="submit" value="確定" style="color:blue; width:150px; height:100px;font-size:34px;" ></b></p>
+</form>
+
+</div>
+
+
+
+<script>
+
+  document.getElementById("field_terms").setCustomValidity("請勾選並同意服務條款!");
+
+</script>
+
+</body>
+</html>
